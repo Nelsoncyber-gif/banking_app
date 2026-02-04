@@ -9,14 +9,9 @@ const pool = new Pool({
   database: process.env.DB_NAME
 });
 
-pool.connect()
+// Simple connection test
+pool.query('SELECT 1')
   .then(() => console.log('Connected to PostgreSQL database'))
   .catch(err => console.error('Database connection error:', err));
 
 module.exports = pool;
-
-await pool.query('BEGIN');
-// run queries
-await pool.query('COMMIT');
-
-await pool.query('ROLLBACK');

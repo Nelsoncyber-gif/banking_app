@@ -1,36 +1,55 @@
-// backend/middleware/auth.js
 const jwt = require('jsonwebtoken');
 
-exports.protect = async (req, res, next) => {
+exports.protect = (req, res, next) => {
   try {
-    // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    // Get token from Authorization header
+    const authHeader = req.header('Authorization');
+    
+    if (!authHeader) {
+      return res.status(401).json({ 
+        message: 'No token, authorization denied',
+        success: false 
+      });
+    }
+
+    // Remove 'Bearer ' prefix
+    const token = authHeader.replace('Bearer ', '').trim();
 
     if (!token) {
-      return res.status(401).json({ message: 'No token, authorization denied' });
+      return res.status(401).json({ 
+        message: 'Token is required',
+        success: false 
+      });
     }
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Add user info to request
+    // Attach user info to request
     req.user = decoded;
     
     next();
-  } catch (err) {
-    res.status(401).json({ message: 'Token is not valid' });
-  }
-};
 
-module.exports = function validate(fields) {
-  return (req, res, next) => {
-    for (let field of fields) {
-      if (!req.body[field]) {
-        return res.status(400).json({
-          message: `${field} is required`
-        });
-      }
+  } catch (err) {
+    console.error('Auth middleware error:', err.message);
+
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        message: 'Token expired, please login again',
+        success: false 
+      });
     }
-    next();
-  };
+
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        message: 'Invalid token',
+        success: false 
+      });
+    }
+
+    res.status(401).json({ 
+      message: 'Token is not valid',
+      success: false 
+    });
+  }
 };

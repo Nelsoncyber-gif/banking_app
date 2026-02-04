@@ -1,23 +1,117 @@
-const rateLimit = require('express-rate-limit');
-
 require('dotenv').config();
 const express = require('express');
-const app = express();
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cors = require('cors');
 
-// 👇 ADD BOTH MIDDLEWARE LINES
-app.use(express.json()); // For JSON bodies
-app.use(express.urlencoded({ extended: true })); // For form data
-
-app.get('/', (req, res) => {
-  res.send('Banking API is running');
-});
+const logger = require('./middleware/logger');
+const pool = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
+const accountRoutes = require('./routes/accountRoutes');
 
-app.use('/api/auth', authRoutes);
-
+const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// ==================== MIDDLEWARE ====================
+
+// Security headers
+app.use(helmet());
+
+// CORS (enable for frontend development)
+app.use(cors());
+
+// Rate limiting (100 requests per 15 minutes per IP)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later'
 });
+app.use(limiter);
+
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Custom logger middleware
+app.use(logger);
+
+// ==================== DATABASE CONNECTION ====================
+
+// Test database connection on startup
+pool.query('SELECT 1')
+  .then(() => {
+    console.log('✅ Database connected successfully');
+  })
+  .catch(err => {
+    console.error('❌ Database connection failed:', err.message);
+    console.error('Server will start but database operations will fail');
+  });
+
+// ==================== ROUTES ====================
+
+// Health check route
+app.get('/', (req, res) => {
+  res.json({ 
+    message: '🏦 Banking API is running',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    status: 'healthy'
+  });
+});
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/accounts', accountRoutes);
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    message: 'Route not found',
+    path: req.originalUrl
+  });
+});
+
+// ==================== ERROR HANDLING ====================
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Global error:', err.stack);
+  
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
+// ==================== SERVER STARTUP ====================
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('❌ Unhandled Promise Rejection:', err);
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+  process.exit(1);
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log('╔═══════════════════════════════════════════════════════════╗');
+  console.log('║                                                           ║');
+  console.log(`║  🚀 Banking API Server Started                           ║`);
+  console.log(`║  🌐 Environment: ${process.env.NODE_ENV || 'development'}                    ║`);
+  console.log(`║  📡 Port: ${PORT}                                          ║`);
+  console.log(`║  🔌 Database: ${process.env.DB_NAME || 'Not configured'}                     ║`);
+  console.log(`║  ⏰ Time: ${new Date().toLocaleString()}                ║`);
+  console.log('║                                                           ║');
+  console.log('╚═══════════════════════════════════════════════════════════╝');
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs (if using swagger)`);
+});
+
+module.exports = app;

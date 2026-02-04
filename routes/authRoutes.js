@@ -1,50 +1,81 @@
-const validate = require('../middleware/validation');
-
-console.log("Auth routes file loaded");
-
 const express = require('express');
 const router = express.Router();
 
-// Import controllers
-const { register, login, profile } = require('../controllers/authController');
-
-// Import middleware
+const validate = require('../middleware/validation');
 const { protect } = require('../middleware/auth');
+const { 
+  register, 
+  login, 
+  profile, 
+  updateProfile,
+  changePassword 
+} = require('../controllers/authController');
 
-const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 100
-});
+// Log to confirm loading
+console.log("Auth routes file loaded");
 
-app.use(limiter);
+// ==================== PUBLIC ROUTES ====================
 
-// Define routes
-router.post('/register', register);
-router.post('/login', login);
+/**
+ * Register new user
+ * @body {string} first_name - Required
+ * @body {string} last_name - Required
+ * @body {string} email - Required
+ * @body {string} password - Required (min 6 chars)
+ * @body {string} phone - Optional
+ */
+router.post(
+  '/register', 
+  validate(['first_name', 'last_name', 'email', 'password']), 
+  register
+);
 
-// Protected route
+/**
+ * Login user
+ * @body {string} email - Required
+ * @body {string} password - Required
+ */
+router.post(
+  '/login', 
+  validate(['email', 'password']), 
+  login
+);
+
+// ==================== PROTECTED ROUTES ====================
+
+/**
+ * Get user profile
+ * @auth Required
+ */
 router.get('/profile', protect, profile);
 
-// Simple test route
-router.get('/test', (req, res) => {
-  res.send("Auth route is alive");
-});
+/**
+ * Update user profile
+ * @auth Required
+ * @body {string} first_name - Required
+ * @body {string} last_name - Required
+ * @body {string} phone - Optional
+ */
+router.put('/profile', protect, updateProfile);
 
+/**
+ * Change password
+ * @auth Required
+ * @body {string} oldPassword - Required
+ * @body {string} newPassword - Required (min 6 chars)
+ */
 router.post('/change-password', protect, changePassword);
 
-router.post('/deposit', protect, deposit);
+// ==================== TEST ROUTE ====================
 
-router.post('/withdraw', protect, withdraw);
-
-router.post('/transfer', protect, transfer);
-
-router.get('/transactions', protect, transactions);
-
-router.post('/register', validate(['email','password']), register);
-router.post('/login', validate(['email','password']), login);
-
-router.post('/deposit', protect, validate(['accountId','amount']), deposit);
-router.post('/withdraw', protect, validate(['accountId','amount']), withdraw);
-router.post('/transfer', protect, validate(['fromAccount','toAccount','amount']), transfer);
+/**
+ * Health check
+ */
+router.get('/test', (req, res) => {
+  res.status(200).json({ 
+    message: "Auth routes are alive", 
+    status: "ok" 
+  });
+});
 
 module.exports = router;
