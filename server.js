@@ -9,17 +9,21 @@ const pool = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
 const accountRoutes = require('./routes/accountRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ==================== MIDDLEWARE ====================
 
+// CORS (MUST be first for frontend access)
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true
+}));
+
 // Security headers
 app.use(helmet());
-
-// CORS (enable for frontend development)
-app.use(cors());
 
 // Rate limiting (100 requests per 15 minutes per IP)
 const limiter = rateLimit({
@@ -60,13 +64,15 @@ app.get('/', (req, res) => {
   });
 });
 
-// API routes
+// API routes - ALL routes imported BEFORE error handlers
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', accountRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
+    success: false,
     message: 'Route not found',
     path: req.originalUrl
   });
@@ -111,7 +117,8 @@ app.listen(PORT, () => {
   console.log('║                                                           ║');
   console.log('╚═══════════════════════════════════════════════════════════╝');
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs (if using swagger)`);
+  console.log(`🌐 Frontend: http://localhost:3000`);
 });
 
+// Optional: Export app for testing
 module.exports = app;

@@ -1,27 +1,19 @@
 const express = require('express');
 const router = express.Router();
-
+const { register, login, logout } = require('../controllers/authController');
 const validate = require('../middleware/validation');
 const { protect } = require('../middleware/auth');
-const { 
-  register, 
-  login, 
-  profile, 
-  updateProfile,
-  changePassword 
-} = require('../controllers/authController');
 
-// Log to confirm loading
-console.log("Auth routes file loaded");
+console.log("Auth routes file loaded - proper version");
 
-// ==================== PUBLIC ROUTES ====================
+// ==================== AUTHENTICATION ====================
 
 /**
- * Register new user
+ * Register a new user
  * @body {string} first_name - Required
  * @body {string} last_name - Required
  * @body {string} email - Required
- * @body {string} password - Required (min 6 chars)
+ * @body {string} password - Required
  * @body {string} phone - Optional
  */
 router.post(
@@ -41,40 +33,46 @@ router.post(
   login
 );
 
-// ==================== PROTECTED ROUTES ====================
-
 /**
- * Get user profile
+ * Logout user (invalidate token)
  * @auth Required
  */
-router.get('/profile', protect, profile);
+router.post('/logout', protect, logout);
+
+// ==================== USER PROFILE ====================
 
 /**
- * Update user profile
+ * Get current user profile
  * @auth Required
- * @body {string} first_name - Required
- * @body {string} last_name - Required
- * @body {string} phone - Optional
  */
-router.put('/profile', protect, updateProfile);
+router.get('/profile', protect, (req, res) => {
+  res.status(200).json({
+    success: true,
+    user: req.user
+  });
+});
+
+// ==================== TEST ROUTES ====================
 
 /**
- * Change password
- * @auth Required
- * @body {string} oldPassword - Required
- * @body {string} newPassword - Required (min 6 chars)
- */
-router.post('/change-password', protect, changePassword);
-
-// ==================== TEST ROUTE ====================
-
-/**
- * Health check
+ * Health check for auth routes
  */
 router.get('/test', (req, res) => {
   res.status(200).json({ 
-    message: "Auth routes are alive", 
-    status: "ok" 
+    message: "Auth routes are working", 
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * Test registration endpoint (for debugging)
+ */
+router.post('/test-register', (req, res) => {
+  console.log('Test register called with:', req.body);
+  res.status(200).json({
+    success: true,
+    message: 'Test successful - route exists',
+    receivedData: req.body
   });
 });
 
