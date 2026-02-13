@@ -64,9 +64,10 @@ const validateDeposit = (req, res, next) => {
   next();
 };
 
-// Export both functions - maintaining backward compatibility
-module.exports = validate;  // Default export for existing imports
-module.exports.validateDeposit = validateDeposit;  // Named export
+// Export as an object with multiple methods
+module.exports = {
+  validate,
+  validateDeposit
+};
 
-// Also export as validate property for consistency
-module.exports.validate = validate;l
+

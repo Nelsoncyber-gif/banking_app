@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const validate = require('../middleware/validation');
+const { validate } = require('../middleware/validation');
 const { protect } = require('../middleware/auth');
 const { 
   createAccount,
@@ -95,10 +95,11 @@ router.get('/transactions', protect, transactions);
  * @access Public
  */
 router.get('/test', (req, res) => {
-  res.status(200).json({ 
-    message: "Account routes are alive", 
-    status: "ok" 
+  res.status(200).json({
+    message: "Account routes are alive",
+    status: "ok"
   });
 });
+
 
 module.exports = router;
